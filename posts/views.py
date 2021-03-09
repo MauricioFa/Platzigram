@@ -3,7 +3,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView
+from django.views.generic import CreateView, DetailView, ListView
+from django.urls import reverse_lazy
 import random
 
 # Forms
@@ -20,31 +21,23 @@ class PostsFeedView(LoginRequiredMixin, ListView):
     paginate_by = 255
     context_object_name = 'posts'
 
-class PostDetailView(LoginRequiredMixin, ListView):
+class PostDetailView(LoginRequiredMixin, DetailView):
     """Return post details"""
 
     template_name = 'posts/detail.html'
     queryset = Post.objects.all()
     context_object_name = 'post'
 
-@login_required
-def create_post(request):
-    """Create new post"""
-    if request.method == 'POST':
-        form = PostForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('posts:feed')
-    else:
-        form = PostForm()
+class CreatePostView(CreateView):
+    """Create a new post"""
+    template_name = "posts/new.html"
+    form_class = PostForm
+    success_url = reverse_lazy('posts:feed')
 
-    return render(
-        request=request,
-        template_name='posts/new.html',
-        context={
-            'form': form,
-            'user': request.user,
-            'profile': request.user.profile
-        }
-        
-    )
+    def get_context_data(self,**kwargs):
+        """Add user and profile to context"""
+
+        context = super().get_context_data(**kwargs)
+        context['user'] = self.request.user
+        context['profile'] = self.request.user.profile
+        return context
